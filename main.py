@@ -36,6 +36,10 @@ def load_image(spriteName):
     return pygame.image.load('resources/{0}.png'.format(spriteName))
 
 
+def update_dict(spriteName, dict):
+    dict[spriteName] = pygame.image.load('resources/{0}.png'.format(spriteName))
+
+
 def render(x, y, sprite):
     # just blit rewritten for convenience
     windowSurfaceObj.blit(sprite, (x, y))
@@ -50,7 +54,7 @@ def display_data(x, y, data, font, color):
 def liquid_collision(liquid, char):
     # detect if a character is in contact with a body of liquid and adjust it accordingly
     for l in range(len(liquid)):
-        if collision(char.y, liquid[l][1], 24) & collision(char.x, liquid[l][0], 24):
+        if collision(char.y, liquid[l][1], 18) & collision(char.x, liquid[l][0], 18):
             char.yvelocity *= 0.5
             char.inLiquid = True
             break
@@ -62,13 +66,12 @@ def ramp_collision(ramp, char):
     # detect if a character is in contact with sloped blocks and adjust it accordingly
     for r in range(len(ramp)):
         if collision(char.y, ramp[r][1], 18) & collision(char.x, ramp[r][0], 18):
-            if ramp[r][3] == True:
-                char.y = ramp[r][1] - (20 - math.fabs(char.x - ramp[r][0]))
-            elif char.x - ramp[r][0] < -1:
-                char.y = ramp[r][1] + math.fabs(char.x - ramp[r][0]) + 2
+            if not ramp[r][3]:
+                char.y = ramp[r][1] - 18 - (char.x - ramp[r][0])
             else:
-                char.y = ramp[r][1] - math.fabs(char.x - ramp[r][0]) - 18
+                char.y = ramp[r][1] - 18 + (char.x - ramp[r][0])
             player.grounded = True
+            break
 
 
 def solid_collision(solid, char):
@@ -90,6 +93,7 @@ def solid_collision(solid, char):
                 char.x = solid[s][0] + 36
             else:
                 char.x = solid[s][0] - 36
+            break
 
 
 def render_visible(tiles, char):
@@ -99,7 +103,15 @@ def render_visible(tiles, char):
             render(t[0] + 320 - char.x, t[1] + 258 - char.y, t[2])
 
 
-class player:
+def generate_rect(startx, starty, length, height, appearance, blocktype, dict):
+    for x in range(startx, startx + length * 36, 36):
+        blocktype.append([x, starty, dict['{0}Top'.format(appearance)]])
+    for x in range(startx, startx + length * 36, 36):
+        for y in range(starty + 36, starty + 36 + height * 36, 36):
+            blocktype.append([x, y, dict['{0}Center'.format(appearance)]])
+
+
+class playerObj:
     # player related info stored here
     x = 0
     y = 0
@@ -113,39 +125,44 @@ class player:
     jump = load_image('frog_leap')
 
 
+player = playerObj()
+
 backgroundObj = load_image('colored_land')
-grassLeft = load_image('grassLeft')
-grassMid = load_image('grassMid')
-grassRight = load_image('grassRight')
-grassCenter = load_image('grassCenter')
-grassSlopeLeft = load_image('grassSlopeLeft')
-grassSlopeRight = load_image('grassSlopeRight')
-waterTop = load_image('waterTop')
-waterCenter = load_image('waterCenter')
+
+blockDict = {}
+
+update_dict('grassLeft', blockDict)
+update_dict('grassTop', blockDict)
+update_dict('grassRight', blockDict)
+update_dict('grassCenter', blockDict)
+update_dict('grassSlopeLeft', blockDict)
+update_dict('grassSlopeMidLeft', blockDict)
+update_dict('grassSlopeMidRight', blockDict)
+update_dict('grassSlopeRight', blockDict)
+update_dict('waterTop', blockDict)
+update_dict('waterCenter', blockDict)
 
 # block format: [x,y, type]
 blocks = []
-for x in range(-3600, 3600, 36):
-    blocks.append([x, 218, grassMid])
-for x in range(-3600, 3600, 36):
-    for y in range(254, 436, 36):
-        blocks.append([x, y, grassCenter])
-blocks.append([0, 160, grassMid])
-blocks.append([36, 60, grassMid])
-blocks.append([220, 80, grassMid])
-blocks.append([100, 160, grassMid])
-blocks.append([-164, 183, grassCenter])
-blocks.append([-200, 183, grassCenter])
-liquids = []
-for x in range(300, 500, 36):
-    for y in range(2, 218, 36):
-        liquids.append([x, y, waterCenter])
+generate_rect(-3600, 218, 200, 6, 'grass', blocks, blockDict)
+generate_rect(-524, 147, 10, 1, 'grass', blocks, blockDict)
+blocks.append([0, 160, blockDict['grassTop']])
+blocks.append([36, 60, blockDict['grassTop']])
+blocks.append([220, 80, blockDict['grassTop']])
+blocks.append([100, 160, blockDict['grassTop']])
+blocks.append([-164, 183, blockDict['grassSlopeMidRight']])
+blocks.append([-560, 183, blockDict['grassSlopeMidLeft']])
 
+# liquid format: [x,y, type]
+liquids = []
+generate_rect(300, -34, 5, 6, 'water', liquids, blockDict)
+
+# slope format: [x,y, type, left/right] right = true left = false
 slopes = []
-slopes.append([-128, 183, grassSlopeRight, True])
-slopes.append([-164, 147, grassSlopeRight, True])
-slopes.append([-200, 147, grassSlopeLeft, False])
-slopes.append([-236, 183, grassSlopeLeft, False])
+slopes.append([-128, 183, blockDict['grassSlopeRight'], True])
+slopes.append([-164, 147, blockDict['grassSlopeRight'], True])
+slopes.append([-560, 147, blockDict['grassSlopeLeft'], False])
+slopes.append([-596, 183, blockDict['grassSlopeLeft'], False])
 
 while not crashed:
     render(0, 0, backgroundObj)

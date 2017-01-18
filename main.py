@@ -1,6 +1,8 @@
 import math
-import pygame
+import os
 import sys
+
+import pygame
 from pygame.locals import *
 
 pygame.init()
@@ -15,10 +17,15 @@ crashed = False
 windowSurfaceObj = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('{0}'.format(title))
 
+# noinspection PyArgumentList,PyArgumentList
 red = pygame.Color(255, 0, 0)
+# noinspection PyArgumentList,PyArgumentList
 green = pygame.Color(0, 255, 0)
+# noinspection PyArgumentList,PyArgumentList
 blue = pygame.Color(0, 0, 255)
+# noinspection PyArgumentList,PyArgumentList
 white = pygame.Color(255, 255, 255)
+# noinspection PyArgumentList,PyArgumentList
 black = pygame.Color(0, 0, 0)
 
 fontObj = pygame.font.SysFont('Times New Roman', 32)
@@ -32,12 +39,9 @@ def collision(a, b, size):
         return False
 
 
-def load_image(spriteName):
-    return pygame.image.load('resources/{0}.png'.format(spriteName))
-
-
-def update_dict(spriteName, dict):
-    dict[spriteName] = pygame.image.load('resources/{0}.png'.format(spriteName))
+def update_dict(spritename, dict):
+    # adds png to sprite dictionary
+    dict[spritename] = pygame.image.load('resources/{0}.png'.format(spritename))
 
 
 def render(x, y, sprite):
@@ -47,8 +51,8 @@ def render(x, y, sprite):
 
 def display_data(x, y, data, font, color):
     # render a variable onscreen
-    dataText = font.render("{0}".format(data), True, color)
-    render(x, y, dataText)
+    datatext = font.render("{0}".format(data), True, color)
+    render(x, y, datatext)
 
 
 def liquid_collision(liquid, char):
@@ -66,10 +70,10 @@ def ramp_collision(ramp, char):
     # detect if a character is in contact with sloped blocks and adjust it accordingly
     for r in range(len(ramp)):
         if collision(char.y, ramp[r][1], 18) & collision(char.x, ramp[r][0], 18):
-            if not ramp[r][3]:
-                char.y = ramp[r][1] - 18 - (char.x - ramp[r][0])
-            else:
+            if ramp[r][3]:
                 char.y = ramp[r][1] - 18 + (char.x - ramp[r][0])
+            else:
+                char.y = ramp[r][1] - 18 - (char.x - ramp[r][0])
             player.grounded = True
             break
 
@@ -84,6 +88,7 @@ def solid_collision(solid, char):
             else:
                 char.y = solid[s][1] - 18
                 char.grounded = True
+                char.yvelocity = 0
             break
         else:
             char.grounded = False
@@ -96,6 +101,29 @@ def solid_collision(solid, char):
             break
 
 
+def update_tiles(tile, name, frames, dict):
+    frame = (tile[4] + 1) % frames
+    tile[4] = frame
+    tile[2] = dict['{0}{1}'.format(name, frame)]
+
+
+def manage_updates(tile, name, frames, dict):
+    if tile[5] >= 0:
+        tile[5] -= 1
+    if tile[5] == 0:
+        update_tiles(tile, name, frames, dict)
+
+
+def object_collision(object, char):
+    for o in range(len(object)):
+        if collision(char.y, object[o][1], 18) & collision(player.x, object[o][0], 18):
+            if object[o][3] == 'spring':
+                char.y -= 2
+                char.yvelocity = 25
+                object[o][5] = 30
+                update_tiles(object[o], 'spring', 2, blockDict)
+
+
 def render_visible(tiles, char):
     # render all tiles on the screen relative to a character
     for t in tiles:
@@ -104,6 +132,7 @@ def render_visible(tiles, char):
 
 
 def generate_rect(startx, starty, length, height, appearance, blocktype, dict):
+    # generate a rectangular structure of the defined block with a certain texture
     for x in range(startx, startx + length * 36, 36):
         blocktype.append([x, starty, dict['{0}Top'.format(appearance)]])
     for x in range(startx, startx + length * 36, 36):
@@ -111,7 +140,13 @@ def generate_rect(startx, starty, length, height, appearance, blocktype, dict):
             blocktype.append([x, y, dict['{0}Center'.format(appearance)]])
 
 
-class playerObj:
+blockDict = {}
+
+for filename in os.listdir('resources'):
+    update_dict(filename[:-4], blockDict)
+
+
+class PlayerObj:
     # player related info stored here
     x = 0
     y = 0
@@ -121,67 +156,56 @@ class playerObj:
     inLiquid = False
     sprite = pygame.sprite.Sprite()
     sprite.image = 0
-    walk = load_image('frog')
-    jump = load_image('frog_leap')
+    walk = blockDict['frog']
+    jump = blockDict['frog_leap']
 
 
-player = playerObj()
+player = PlayerObj()
 
-backgroundObj = load_image('colored_land')
-
-blockDict = {}
-
-update_dict('grassLeft', blockDict)
-update_dict('grassTop', blockDict)
-update_dict('grassRight', blockDict)
-update_dict('grassCenter', blockDict)
-update_dict('grassSlopeLeft', blockDict)
-update_dict('grassSlopeMidLeft', blockDict)
-update_dict('grassSlopeMidRight', blockDict)
-update_dict('grassSlopeRight', blockDict)
-update_dict('waterTop', blockDict)
-update_dict('waterCenter', blockDict)
-
-# block format: [x,y, type]
+# block format: [x,y,type]
 blocks = []
-generate_rect(-3600, 218, 200, 6, 'grass', blocks, blockDict)
-generate_rect(-524, 147, 10, 1, 'grass', blocks, blockDict)
+generate_rect(-3600, 216, 200, 6, 'grass', blocks, blockDict)
+generate_rect(-524, 144, 10, 1, 'grass', blocks, blockDict)
+generate_rect(-660, 0, 1, 4, 'grass', blocks, blockDict)
 blocks.append([0, 160, blockDict['grassTop']])
 blocks.append([36, 60, blockDict['grassTop']])
 blocks.append([220, 80, blockDict['grassTop']])
 blocks.append([100, 160, blockDict['grassTop']])
-blocks.append([-164, 183, blockDict['grassSlopeMidRight']])
-blocks.append([-560, 183, blockDict['grassSlopeMidLeft']])
 
-# liquid format: [x,y, type]
+# block format: [x,y,appearance,frame,type]
+objects = []
+objects.append([136, 180, blockDict['spring1'], 'spring', 1, -1])
+
+# liquid format: [x,y,type]
 liquids = []
 generate_rect(300, -34, 5, 6, 'water', liquids, blockDict)
 
-# slope format: [x,y, type, left/right] right = true left = false
+# slope format: [x,y,type,left/right](right = true left = false)
 slopes = []
-slopes.append([-128, 183, blockDict['grassSlopeRight'], True])
-slopes.append([-164, 147, blockDict['grassSlopeRight'], True])
-slopes.append([-560, 147, blockDict['grassSlopeLeft'], False])
-slopes.append([-596, 183, blockDict['grassSlopeLeft'], False])
+slopes.append([-164, 144, blockDict['grassSlopeRight'], True])
+slopes.append([-128, 180, blockDict['grassSlopeRight'], True])
+slopes.append([-560, 144, blockDict['grassSlopeLeft'], False])
+slopes.append([-596, 180, blockDict['grassSlopeLeft'], False])
+blocks.append([-164, 180, blockDict['grassSlopeMidRight']])
+blocks.append([-560, 180, blockDict['grassSlopeMidLeft']])
 
 while not crashed:
-    render(0, 0, backgroundObj)
+    render(0, 0, blockDict['colored_land'])
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
-    if pygame.key.get_pressed()[pygame.K_SPACE] != 0:
-        if player.grounded == True or player.inLiquid == True:
-            player.yvelocity = 14
-            player.y -= 1
-            player.grounded = False
+    if pygame.key.get_pressed()[pygame.K_SPACE] != 0 and (player.grounded or player.inLiquid):
+        player.yvelocity = 14
+        player.y -= 1
+        player.grounded = False
     if pygame.key.get_pressed()[pygame.K_RIGHT] != 0:
         player.x += 7
         player.direction = 1
     if pygame.key.get_pressed()[pygame.K_LEFT] != 0:
         player.x -= 7
         player.direction = 0
-    if player.grounded == True:
+    if player.grounded:
         player.sprite.image = player.walk
     else:
         player.sprite.image = player.jump
@@ -194,13 +218,18 @@ while not crashed:
     solid_collision(blocks, player)
     liquid_collision(liquids, player)
     ramp_collision(slopes, player)
+    object_collision(objects, player)
+    for o in range(len(objects)):
+        manage_updates(objects[o], 'spring', 2, blockDict)
     render_visible(slopes, player)
     render_visible(blocks, player)
     render_visible(liquids, player)
+    render_visible(objects, player)
     display_data(10, 10, player.grounded, fontObj, white)
     display_data(10, 40, player.inLiquid, fontObj, white)
-    display_data(10, 70, player.x, fontObj, white)
-    display_data(10, 100, player.y, fontObj, white)
+    display_data(10, 70, player.yvelocity, fontObj, white)
+    display_data(10, 100, player.x, fontObj, white)
+    display_data(10, 130, player.y, fontObj, white)
     render(320, 240, pygame.transform.flip(player.sprite.image, player.direction, 0))
     pygame.display.update()
     fpsClock.tick(30)

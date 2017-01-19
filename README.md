@@ -1,4 +1,6 @@
 # platformer
 Sidescrolling platformer in pygame
 
-Image credits to KenneyNL kenney.nl
+Image credits to KenneyNL:
+
+www.kenney.nl

@@ -17,15 +17,10 @@ crashed = False
 windowSurfaceObj = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('{0}'.format(title))
 
-# noinspection PyArgumentList,PyArgumentList
 red = pygame.Color(255, 0, 0)
-# noinspection PyArgumentList,PyArgumentList
 green = pygame.Color(0, 255, 0)
-# noinspection PyArgumentList,PyArgumentList
 blue = pygame.Color(0, 0, 255)
-# noinspection PyArgumentList,PyArgumentList
 white = pygame.Color(255, 255, 255)
-# noinspection PyArgumentList,PyArgumentList
 black = pygame.Color(0, 0, 0)
 
 fontObj = pygame.font.SysFont('Times New Roman', 32)
@@ -107,16 +102,17 @@ def update_tiles(tile, name, frames, dict):
     tile[2] = dict['{0}{1}'.format(name, frame)]
 
 
-def manage_updates(tile, name, frames, dict):
+def manage_updates(tile, name, frames, dict, nextupdate=-1):
     if tile[5] >= 0:
         tile[5] -= 1
     if tile[5] == 0:
         update_tiles(tile, name, frames, dict)
+        tile[5] = nextupdate
 
 
 def object_collision(object, char):
     for o in range(len(object)):
-        if collision(char.y, object[o][1], 18) & collision(player.x, object[o][0], 18):
+        if collision(char.y, object[o][1], 18) & collision(player.x, object[o][0], 35):
             if object[o][3] == 'spring':
                 char.y -= 2
                 char.yvelocity = 25
@@ -140,8 +136,39 @@ def generate_rect(startx, starty, length, height, appearance, blocktype, dict):
             blocktype.append([x, y, dict['{0}Center'.format(appearance)]])
 
 
-blockDict = {}
+def generate_ramp(startx, starty, length, appearance, blocktype, blocktype2, direction, dict):
+    # generate a ramp of
+    tlen = length
+    if direction:
+        while tlen > 0:
+            blocktype.append([startx + tlen * 36, starty + tlen * 36, dict['{0}SlopeRight'.format(appearance)], True])
+            if tlen < length:
+                blocktype2.append(
+                    [startx + tlen * 36, starty + (tlen + 1) * 36, dict['{0}SlopeMidRight'.format(appearance)], True])
+            if tlen + 1 < length:
+                tlen2 = tlen + 1
+                while tlen2 < length:
+                    blocktype2.append(
+                        [startx + tlen * 36, starty + (tlen2 + 1) * 36, dict['{0}Center'.format(appearance)], True])
+                    tlen2 += 1
+            tlen -= 1
+    else:
+        while tlen > 0:
+            blocktype.append([startx - tlen * 36, starty + tlen * 36, dict['{0}SlopeLeft'.format(appearance)], False])
+            if tlen < length:
+                blocktype2.append(
+                    [startx - tlen * 36, starty + (tlen + 1) * 36, dict['{0}SlopeMidLeft'.format(appearance)], False])
+            if tlen + 1 < length:
+                tlen2 = tlen + 1
+                while tlen2 < length:
+                    blocktype2.append(
+                        [startx - tlen * 36, starty + (tlen2 + 1) * 36, dict['{0}Center'.format(appearance)], True])
+                    tlen2 += 1
+            tlen -= 1
 
+
+blockDict = {}
+# autofill dictionary with sprites from resources
 for filename in os.listdir('resources'):
     update_dict(filename[:-4], blockDict)
 
@@ -166,28 +193,20 @@ player = PlayerObj()
 blocks = []
 generate_rect(-3600, 216, 200, 6, 'grass', blocks, blockDict)
 generate_rect(-524, 144, 10, 1, 'grass', blocks, blockDict)
-generate_rect(-660, 0, 1, 4, 'grass', blocks, blockDict)
-blocks.append([0, 160, blockDict['grassTop']])
-blocks.append([36, 60, blockDict['grassTop']])
-blocks.append([220, 80, blockDict['grassTop']])
-blocks.append([100, 160, blockDict['grassTop']])
+generate_rect(-660, 72, 1, 2, 'grass', blocks, blockDict)
 
-# block format: [x,y,appearance,frame,type]
+# object format: [x,y,appearance,object type,current frame,frames in animation]
 objects = []
 objects.append([136, 180, blockDict['spring1'], 'spring', 1, -1])
 
 # liquid format: [x,y,type]
 liquids = []
-generate_rect(300, -34, 5, 6, 'water', liquids, blockDict)
+generate_rect(300, -36, 5, 6, 'water', liquids, blockDict)
 
 # slope format: [x,y,type,left/right](right = true left = false)
 slopes = []
-slopes.append([-164, 144, blockDict['grassSlopeRight'], True])
-slopes.append([-128, 180, blockDict['grassSlopeRight'], True])
-slopes.append([-560, 144, blockDict['grassSlopeLeft'], False])
-slopes.append([-596, 180, blockDict['grassSlopeLeft'], False])
-blocks.append([-164, 180, blockDict['grassSlopeMidRight']])
-blocks.append([-560, 180, blockDict['grassSlopeMidLeft']])
+generate_ramp(-200, 108, 2, 'grass', slopes, blocks, True, blockDict)
+generate_ramp(-524, 108, 2, 'grass', slopes, blocks, False, blockDict)
 
 while not crashed:
     render(0, 0, blockDict['colored_land'])

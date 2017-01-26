@@ -1,7 +1,4 @@
-import math
-import os
-import sys
-import pygame
+import math, os, sys, pygame
 from pygame.locals import *
 
 pygame.init()
@@ -34,8 +31,8 @@ def collision(a, b, size):
 
 
 # adds png to sprite dictionary
-def update_dict(spritename, dict):
-    dict[spritename] = pygame.image.load('resources/{0}.png'.format(spritename))
+def update_dict(sprite_name, dict):
+    dict[sprite_name] = pygame.image.load('resources/{0}.png'.format(sprite_name))
 
 
 # just blit rewritten for convenience
@@ -57,12 +54,12 @@ def update_tiles(tile, name, frames, dict):
 
 
 # support for smooth animation transitions
-def manage_updates(tile, frames, dict, nextupdate=-1):
+def manage_updates(tile, frames, dict, next_update=-1):
     if tile[5] >= 0:
         tile[5] -= 1
     if tile[5] == 0:
         update_tiles(tile, tile[3], frames, dict)
-        tile[5] = nextupdate
+        tile[5] = next_update
 
 
 # detect if a character is in contact with a body of liquid and adjust it accordingly
@@ -133,10 +130,10 @@ def render_visible(tiles, char):
 # generate a rectangular structure of the defined block with a certain texture
 def generate_rect(startx, starty, length, height, appearance, blocktype, dict):
     for x in range(startx, startx + length * 36, 36):
-        blocktype.append([x, starty, dict['{0}Top'.format(appearance)]])
+        blocktype.append([x, starty, dict['{0}_top'.format(appearance)]])
     for x in range(startx, startx + length * 36, 36):
         for y in range(starty + 36, starty + 36 + height * 36, 36):
-            blocktype.append([x, y, dict['{0}Center'.format(appearance)]])
+            blocktype.append([x, y, dict['{0}_center'.format(appearance)]])
 
 
 # generate a ramp of the defined block with a certain texture
@@ -144,28 +141,28 @@ def generate_ramp(startx, starty, length, appearance, blocktype, blocktype2, dir
     tlen = length
     if direction:
         while tlen > 0:
-            blocktype.append([startx + tlen * 36, starty + tlen * 36, dict['{0}SlopeRight'.format(appearance)], True])
+            blocktype.append([startx + tlen * 36, starty + tlen * 36, dict['{0}_s_right'.format(appearance)], True])
             if tlen < length:
                 blocktype2.append(
-                    [startx + tlen * 36, starty + (tlen + 1) * 36, dict['{0}SlopeMidRight'.format(appearance)], True])
+                    [startx + tlen * 36, starty + (tlen + 1) * 36, dict['{0}_s_m_right'.format(appearance)], True])
             if tlen + 1 < length:
                 tlen2 = tlen + 1
                 while tlen2 < length:
                     blocktype2.append(
-                        [startx + tlen * 36, starty + (tlen2 + 1) * 36, dict['{0}Center'.format(appearance)], True])
+                        [startx + tlen * 36, starty + (tlen2 + 1) * 36, dict['{0}_center'.format(appearance)], True])
                     tlen2 += 1
             tlen -= 1
     else:
         while tlen > 0:
-            blocktype.append([startx - tlen * 36, starty + tlen * 36, dict['{0}SlopeLeft'.format(appearance)], False])
+            blocktype.append([startx - tlen * 36, starty + tlen * 36, dict['{0}_s_left'.format(appearance)], False])
             if tlen < length:
                 blocktype2.append(
-                    [startx - tlen * 36, starty + (tlen + 1) * 36, dict['{0}SlopeMidLeft'.format(appearance)], False])
+                    [startx - tlen * 36, starty + (tlen + 1) * 36, dict['{0}_s_m_left'.format(appearance)], False])
             if tlen + 1 < length:
                 tlen2 = tlen + 1
                 while tlen2 < length:
                     blocktype2.append(
-                        [startx - tlen * 36, starty + (tlen2 + 1) * 36, dict['{0}Center'.format(appearance)], True])
+                        [startx - tlen * 36, starty + (tlen2 + 1) * 36, dict['{0}_center'.format(appearance)], True])
                     tlen2 += 1
             tlen -= 1
 
@@ -188,14 +185,14 @@ class playerObj:
     sprite = pygame.sprite.Sprite()
     sprite.image = 0
     walk = blockDict['frog']
-    jump = blockDict['frogLeap']
+    jump = blockDict['frog_leap']
 
 
 class msgBoxObj:
     x = 10
     y = 10
     sprite = pygame.sprite.Sprite()
-    sprite.image = blockDict['textBox']
+    sprite.image = blockDict['text_box']
 
     def __init__(self, msg):
         self.message = fontObj.render("{0}".format(msg), True, white)
@@ -230,7 +227,6 @@ generate_ramp(-200, 108, 2, 'grass', slopes, blocks, True, blockDict)
 generate_ramp(-524, 108, 2, 'grass', slopes, blocks, False, blockDict)
 
 while not crashed:
-    render(0, 0, blockDict['coloredLand'])
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
@@ -254,6 +250,7 @@ while not crashed:
             player.yvelocity -= 1
         else:
             player.yvelocity = 0
+    render(0, 0, blockDict['colored_land'])
     player.y -= player.yvelocity
     solid_collision(blocks, player)
     liquid_collision(liquids, player)
